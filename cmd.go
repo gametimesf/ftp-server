@@ -704,6 +704,7 @@ func (cmd commandRetr) Execute(conn *Conn, param string) {
 	}()
 	bytes, data, err := conn.driver.GetFile(path, conn.lastFilePos)
 	if err == nil {
+		defer data.Close()
 		conn.writeMessage(150, fmt.Sprintf("Data transfer starting %v bytes", bytes))
 		err = conn.sendOutofBandDataWriter(data)
 	} else {
@@ -1031,6 +1032,7 @@ func (cmd commandStor) Execute(conn *Conn, param string) {
 
 	bytes, err := conn.driver.PutFile(targetPath, conn.dataConn, conn.appendData)
 	if err == nil {
+		defer conn.dataConn.Close()
 		msg := "OK, received " + strconv.Itoa(int(bytes)) + " bytes"
 		conn.writeMessage(226, msg)
 	} else {
