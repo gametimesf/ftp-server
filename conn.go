@@ -8,13 +8,10 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"path/filepath"
 	"strconv"
 	"strings"
-
-	mrand "math/rand"
 )
 
 const (
@@ -55,17 +52,7 @@ func (conn *Conn) PublicIp() string {
 }
 
 func (conn *Conn) PassivePort() int {
-	portRange := strings.Split(conn.server.PassivePorts, "-")
-
-	if len(portRange) != 2 {
-		log.Println("empty port")
-		return 0
-	}
-
-	minPort, _ := strconv.Atoi(strings.TrimSpace(portRange[0]))
-	maxPort, _ := strconv.Atoi(strings.TrimSpace(portRange[1]))
-
-	return minPort + mrand.Intn(maxPort-minPort)
+	return 0
 }
 
 // returns a random 20 char string that can be used as a unique session ID
