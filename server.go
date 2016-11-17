@@ -150,7 +150,9 @@ func (server *Server) newConn(tcpConn net.Conn, driver Driver) *Conn {
 	c.sessionID = newSessionID()
 	c.logger = newLogger(c.sessionID)
 	c.tlsConfig = server.tlsConfig
+
 	driver.Init(c)
+
 	return c
 }
 
@@ -202,20 +204,25 @@ func (server *Server) ListenAndServe() error {
 	server.logger.Printf("%s listening on %d", server.Name, server.Port)
 
 	server.listener = listener
+
 	for {
 		tcpConn, err := server.listener.Accept()
+
 		if err != nil {
 			server.logger.Printf("listening error: %v", err)
 			break
 		}
 		driver, err := server.Factory.NewDriver()
+
 		if err != nil {
 			server.logger.Printf("Error creating driver, aborting client connection: %v", err)
 			tcpConn.Close()
-		} else {
-			ftpConn := server.newConn(tcpConn, driver)
-			go ftpConn.Serve()
+			continue
 		}
+
+		ftpConn := server.newConn(tcpConn, driver)
+
+		go ftpConn.Serve()
 	}
 	return nil
 }

@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 )
 
 // A data socket is used to send non-control data between the client and
@@ -26,7 +27,7 @@ type DataSocket interface {
 }
 
 type ftpActiveSocket struct {
-	conn   *net.TCPConn
+	conn   net.Conn
 	host   string
 	port   int
 	logger *Logger
@@ -44,7 +45,7 @@ func newActiveSocket(remote string, port int, logger *Logger) (DataSocket, error
 		return nil, err
 	}
 
-	tcpConn, err := net.DialTCP("tcp", nil, raddr)
+	tcpConn, err := net.DialTimeout("tcp", raddr.String(), time.Minute)
 
 	if err != nil {
 		logger.Print(err)
@@ -81,27 +82,31 @@ func (socket *ftpActiveSocket) Close() error {
 }
 
 type ftpPassiveSocket struct {
-	conn       net.Conn
-	port       int
-	host       string
-	ingress    chan []byte
-	egress     chan []byte
-	logger     *Logger
-	wg         sync.WaitGroup
-	err        error
-	tlsConfing *tls.Config
+	conn      net.Conn
+	port      int
+	host      string
+	ingress   chan []byte
+	egress    chan []byte
+	logger    *Logger
+	wg        sync.WaitGroup
+	err       error
+	tlsConfig *tls.Config
 }
 
-func newPassiveSocket(host string, port int, logger *Logger, tlsConfing *tls.Config) (DataSocket, error) {
+func newPassiveSocket(host string, port int, logger *Logger, tlsConfig *tls.Config) (DataSocket, error) {
 	socket := new(ftpPassiveSocket)
 	socket.ingress = make(chan []byte)
 	socket.egress = make(chan []byte)
 	socket.logger = logger
 	socket.host = host
 	socket.port = port
-	if err := socket.GoListenAndServe(); err != nil {
+
+	err := socket.GoListenAndServe()
+
+	if err != nil {
 		return nil, err
 	}
+
 	return socket, nil
 }
 
@@ -117,6 +122,7 @@ func (socket *ftpPassiveSocket) Read(p []byte) (n int, err error) {
 	if err := socket.waitForOpenSocket(); err != nil {
 		return 0, err
 	}
+
 	return socket.conn.Read(p)
 }
 
@@ -124,6 +130,7 @@ func (socket *ftpPassiveSocket) Write(p []byte) (n int, err error) {
 	if err := socket.waitForOpenSocket(); err != nil {
 		return 0, err
 	}
+
 	return socket.conn.Write(p)
 }
 
@@ -137,13 +144,16 @@ func (socket *ftpPassiveSocket) Close() error {
 
 func (socket *ftpPassiveSocket) GoListenAndServe() (err error) {
 	laddr, err := net.ResolveTCPAddr("tcp", net.JoinHostPort("", strconv.Itoa(socket.port)))
+
 	if err != nil {
 		socket.logger.Print(err)
 		return
 	}
 
 	var listener net.Listener
+
 	listener, err = net.ListenTCP("tcp", laddr)
+
 	if err != nil {
 		socket.logger.Print(err)
 		return
@@ -152,6 +162,7 @@ func (socket *ftpPassiveSocket) GoListenAndServe() (err error) {
 	add := listener.Addr()
 	parts := strings.Split(add.String(), ":")
 	port, err := strconv.Atoi(parts[len(parts)-1])
+
 	if err != nil {
 		socket.logger.Print(err)
 		return
@@ -160,13 +171,14 @@ func (socket *ftpPassiveSocket) GoListenAndServe() (err error) {
 	socket.port = port
 	socket.wg.Add(1)
 
-	if socket.tlsConfing != nil {
-		listener = tls.NewListener(listener, socket.tlsConfing)
+	if socket.tlsConfig != nil {
+		listener = tls.NewListener(listener, socket.tlsConfig)
 	}
 
 	go func() {
 		conn, err := listener.Accept()
 		socket.wg.Done()
+
 		if err != nil {
 			socket.err = err
 			return
@@ -174,6 +186,7 @@ func (socket *ftpPassiveSocket) GoListenAndServe() (err error) {
 		socket.err = nil
 		socket.conn = conn
 	}()
+
 	return nil
 }
 
@@ -181,6 +194,8 @@ func (socket *ftpPassiveSocket) waitForOpenSocket() error {
 	if socket.conn != nil {
 		return nil
 	}
+
 	socket.wg.Wait()
+
 	return socket.err
 }

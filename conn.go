@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 )
 
 const (
@@ -80,12 +81,13 @@ func newSessionID() string {
 // goroutine, so use this channel to be notified when the connection can be
 // cleaned up.
 func (conn *Conn) Serve() {
+	conn.conn.SetDeadline(time.Now().Add(time.Minute))
 	conn.logger.Print("Connection Established")
-	// send welcome
 	conn.writeMessage(220, conn.server.WelcomeMessage)
-	// read commands
+
 	for {
 		line, err := conn.controlReader.ReadString('\n')
+
 		if err != nil {
 			if err != io.EOF {
 				conn.logger.Print(fmt.Sprintln("read error:", err))
@@ -100,6 +102,7 @@ func (conn *Conn) Serve() {
 			break
 		}
 	}
+
 	conn.Close()
 	conn.logger.Print("Connection Terminated")
 }
@@ -132,12 +135,16 @@ func (conn *Conn) upgradeToTLS() error {
 // appropriate response.
 func (conn *Conn) receiveLine(line string) {
 	command, param := conn.parseLine(line)
+
 	conn.logger.PrintCommand(command, param)
+
 	cmdObj := commands[strings.ToUpper(command)]
+
 	if cmdObj == nil {
 		conn.writeMessage(500, "Command not found")
 		return
 	}
+
 	if cmdObj.RequireParam() && param == "" {
 		conn.writeMessage(553, "action aborted, required param missing")
 	} else if cmdObj.RequireAuth() && conn.user == "" {

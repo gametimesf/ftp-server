@@ -283,10 +283,12 @@ func (cmd commandEprt) Execute(conn *Conn, param string) {
 		return
 	}
 	socket, err := newActiveSocket(host, port, conn.logger)
+
 	if err != nil {
 		conn.writeMessage(425, "Data connection failed")
 		return
 	}
+
 	conn.dataConn = socket
 	conn.writeMessage(200, "Connection established ("+strconv.Itoa(port)+")")
 }
@@ -638,10 +640,12 @@ func (cmd commandPort) Execute(conn *Conn, param string) {
 	port := (portOne * 256) + portTwo
 	host := nums[0] + "." + nums[1] + "." + nums[2] + "." + nums[3]
 	socket, err := newActiveSocket(host, port, conn.logger)
+
 	if err != nil {
 		conn.writeMessage(425, "Data connection failed")
 		return
 	}
+
 	conn.dataConn = socket
 	conn.writeMessage(200, "Connection established ("+strconv.Itoa(port)+")")
 }
@@ -1038,8 +1042,8 @@ func (cmd commandStor) Execute(conn *Conn, param string) {
 	}()
 
 	bytes, err := conn.driver.PutFile(targetPath, conn.dataConn, conn.appendData)
+
 	if err == nil {
-		defer conn.dataConn.Close()
 		msg := "OK, received " + strconv.Itoa(int(bytes)) + " bytes"
 		conn.writeMessage(226, msg)
 	} else {
