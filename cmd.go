@@ -13,8 +13,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/jehiah/go-strftime"
-	"github.com/lunny/log"
+	"log"
 )
 
 type Command interface {
@@ -239,11 +238,11 @@ func (cmd commandDele) IsExtend() bool {
 }
 
 func (cmd commandDele) RequireParam() bool {
-	return false
+	return true
 }
 
 func (cmd commandDele) RequireAuth() bool {
-	return false
+	return true
 }
 
 func (cmd commandDele) Execute(conn *Conn, param string) {
@@ -310,7 +309,7 @@ func (cmd commandEpsv) RequireAuth() bool {
 }
 
 func (cmd commandEpsv) Execute(conn *Conn, param string) {
-	addr := conn.PublicIp()
+	addr := conn.passiveListenIP()
 	lastIdx := strings.LastIndex(addr, ":")
 
 	if lastIdx <= 0 {
@@ -321,7 +320,7 @@ func (cmd commandEpsv) Execute(conn *Conn, param string) {
 	socket, err := newPassiveSocket(addr[:lastIdx], conn.PassivePort(), conn.logger, conn.tlsConfig)
 
 	if err != nil {
-		log.Error(err)
+		log.Println(err)
 		conn.writeMessage(425, "Data connection failed")
 		return
 	}
@@ -370,7 +369,9 @@ func (cmd commandList) Execute(conn *Conn, param string) {
 		conn.writeMessage(550, err.Error())
 		return
 	}
+
 	if !info.IsDir() {
+		conn.logger.Printf("%s is not a dir.\n", path)
 		return
 	}
 	var files []FileInfo
@@ -462,7 +463,7 @@ func (cmd commandMdtm) Execute(conn *Conn, param string) {
 	path := conn.buildPath(param)
 	stat, err := conn.driver.Stat(path)
 	if err == nil {
-		conn.writeMessage(213, strftime.Format("%Y%m%d%H%M%S", stat.ModTime()))
+		conn.writeMessage(213, stat.ModTime().Format("20060102150405"))
 	} else {
 		conn.writeMessage(450, "File not available")
 	}
@@ -477,11 +478,11 @@ func (cmd commandMkd) IsExtend() bool {
 }
 
 func (cmd commandMkd) RequireParam() bool {
-	return false
+	return true
 }
 
 func (cmd commandMkd) RequireAuth() bool {
-	return false
+	return true
 }
 
 func (cmd commandMkd) Execute(conn *Conn, param string) {
@@ -553,7 +554,7 @@ func (cmd commandPass) IsExtend() bool {
 }
 
 func (cmd commandPass) RequireParam() bool {
-	return false
+	return true
 }
 
 func (cmd commandPass) RequireAuth() bool {
@@ -595,8 +596,8 @@ func (cmd commandPasv) RequireAuth() bool {
 }
 
 func (cmd commandPasv) Execute(conn *Conn, param string) {
-	socket, err := newPassiveSocket(conn.PublicIp(), conn.PassivePort(), conn.logger, conn.tlsConfig)
-
+	listenIP := conn.passiveListenIP()
+	socket, err := newPassiveSocket(listenIP, conn.PassivePort(), conn.logger, conn.tlsConfig)
 	if err != nil {
 		conn.writeMessage(425, "Data connection failed")
 		return
@@ -605,7 +606,7 @@ func (cmd commandPasv) Execute(conn *Conn, param string) {
 	conn.dataConn = socket
 	p1 := socket.Port() / 256
 	p2 := socket.Port() - (p1 * 256)
-	quads := strings.Split(conn.PublicIp(), ".")
+	quads := strings.Split(listenIP, ".")
 	target := fmt.Sprintf("(%s,%s,%s,%s,%d,%d)", quads[0], quads[1], quads[2], quads[3], p1, p2)
 	msg := "Entering Passive Mode " + target
 
@@ -754,11 +755,11 @@ func (cmd commandRnfr) IsExtend() bool {
 }
 
 func (cmd commandRnfr) RequireParam() bool {
-	return false
+	return true
 }
 
 func (cmd commandRnfr) RequireAuth() bool {
-	return false
+	return true
 }
 
 func (cmd commandRnfr) Execute(conn *Conn, param string) {
@@ -775,11 +776,11 @@ func (cmd commandRnto) IsExtend() bool {
 }
 
 func (cmd commandRnto) RequireParam() bool {
-	return false
+	return true
 }
 
 func (cmd commandRnto) RequireAuth() bool {
-	return false
+	return true
 }
 
 func (cmd commandRnto) Execute(conn *Conn, param string) {
@@ -805,11 +806,11 @@ func (cmd commandRmd) IsExtend() bool {
 }
 
 func (cmd commandRmd) RequireParam() bool {
-	return false
+	return true
 }
 
 func (cmd commandRmd) RequireAuth() bool {
-	return false
+	return true
 }
 
 func (cmd commandRmd) Execute(conn *Conn, param string) {
@@ -1085,7 +1086,7 @@ func (cmd commandSyst) IsExtend() bool {
 }
 
 func (cmd commandSyst) RequireParam() bool {
-	return true
+	return false
 }
 
 func (cmd commandSyst) RequireAuth() bool {

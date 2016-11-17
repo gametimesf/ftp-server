@@ -51,6 +51,13 @@ func (conn *Conn) PublicIp() string {
 	return conn.server.PublicIp
 }
 
+func (conn *Conn) passiveListenIP() string {
+	if len(conn.PublicIp()) > 0 {
+		return conn.PublicIp()
+	}
+	return conn.conn.LocalAddr().String()
+}
+
 func (conn *Conn) PassivePort() int {
 	return 0
 }
@@ -183,6 +190,7 @@ func (conn *Conn) buildPath(filename string) (fullPath string) {
 		fullPath = filepath.Clean(conn.namePrefix)
 	}
 	fullPath = strings.Replace(fullPath, "//", "/", -1)
+	fullPath = strings.Replace(fullPath, string(filepath.Separator), "/", -1)
 	return
 }
 
