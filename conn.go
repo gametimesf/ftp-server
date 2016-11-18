@@ -95,6 +95,7 @@ func (conn *Conn) Serve() {
 
 			break
 		}
+
 		conn.receiveLine(line)
 		// QUIT command closes connection, break to avoid error on reading from
 		// closed socket
