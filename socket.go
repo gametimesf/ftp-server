@@ -2,6 +2,7 @@ package server
 
 import (
 	"crypto/tls"
+	"fmt"
 	"net"
 	"strconv"
 	"strings"
@@ -58,6 +59,8 @@ func newActiveSocket(remote string, port int, logger *Logger) (DataSocket, error
 	socket.port = port
 	socket.logger = logger
 
+	fmt.Println("open", socket.port)
+
 	return socket, nil
 }
 
@@ -78,6 +81,7 @@ func (socket *ftpActiveSocket) Write(p []byte) (n int, err error) {
 }
 
 func (socket *ftpActiveSocket) Close() error {
+	fmt.Println("close", socket.port)
 	return socket.conn.Close()
 }
 
@@ -107,6 +111,8 @@ func newPassiveSocket(host string, port int, logger *Logger, tlsConfig *tls.Conf
 		return nil, err
 	}
 
+	fmt.Println("open", socket.port)
+
 	return socket, nil
 }
 
@@ -118,16 +124,20 @@ func (socket *ftpPassiveSocket) Port() int {
 	return socket.port
 }
 
-func (socket *ftpPassiveSocket) Read(p []byte) (n int, err error) {
-	if err := socket.waitForOpenSocket(); err != nil {
+func (socket *ftpPassiveSocket) Read(p []byte) (int, error) {
+	err := socket.waitForOpenSocket()
+
+	if err != nil {
 		return 0, err
 	}
 
 	return socket.conn.Read(p)
 }
 
-func (socket *ftpPassiveSocket) Write(p []byte) (n int, err error) {
-	if err := socket.waitForOpenSocket(); err != nil {
+func (socket *ftpPassiveSocket) Write(p []byte) (int, error) {
+	err := socket.waitForOpenSocket()
+
+	if err != nil {
 		return 0, err
 	}
 
@@ -135,10 +145,11 @@ func (socket *ftpPassiveSocket) Write(p []byte) (n int, err error) {
 }
 
 func (socket *ftpPassiveSocket) Close() error {
-	//socket.logger.Print("closing passive data socket")
 	if socket.conn != nil {
+		fmt.Println("close", socket.port)
 		return socket.conn.Close()
 	}
+
 	return nil
 }
 

@@ -10,7 +10,6 @@ import (
 	"io"
 	"net"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -98,24 +97,27 @@ func (conn *Conn) Serve() {
 		}
 
 		conn.receiveLine(line)
-		// QUIT command closes connection, break to avoid error on reading from
-		// closed socket
-		if conn.closed == true {
+
+		if conn.closed {
 			break
 		}
 	}
 
 	conn.Close()
-	conn.logger.Print("Connection Terminated")
 }
 
 // Close will manually close this connection, even if the client isn't ready.
 func (conn *Conn) Close() {
+	fmt.Println("close", conn.conn.LocalAddr(), conn.conn.RemoteAddr())
 	conn.conn.Close()
-	conn.closed = true
 
 	if conn.dataConn != nil {
-		conn.dataConn.Close()
+		err := conn.dataConn.Close()
+
+		if err != nil {
+			fmt.Println(err)
+		}
+
 		conn.dataConn = nil
 	}
 }
@@ -208,31 +210,42 @@ func (conn *Conn) buildPath(filename string) (fullPath string) {
 // sendOutofbandData will send a string to the client via the currently open
 // data socket. Assumes the socket is open and ready to be used.
 func (conn *Conn) sendOutofbandData(data []byte) {
-	bytes := len(data)
+	n, err := conn.dataConn.Write(data)
 
-	if conn.dataConn != nil {
-		conn.dataConn.Write(data)
-		conn.dataConn.Close()
-		conn.dataConn = nil
+	if err != nil {
+		fmt.Println(err)
 	}
-	message := "Closing data connection, sent " + strconv.Itoa(bytes) + " bytes"
-	conn.writeMessage(226, message)
+
+	err = conn.dataConn.Close()
+
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	conn.dataConn = nil
+
+	conn.writeMessage(226, fmt.Sprintf("Closing data connection, sent %v bytes", n))
 }
 
 func (conn *Conn) sendOutofBandDataWriter(data io.ReadCloser) error {
 	conn.lastFilePos = 0
 	bytes, err := io.Copy(conn.dataConn, data)
 
-	defer conn.dataConn.Close()
-	defer func() {
-		conn.dataConn = nil
-	}()
-
 	if err != nil {
 		return err
 	}
 
-	conn.writeMessage(226, "Closing data connection, sent "+strconv.Itoa(int(bytes))+" bytes")
+	defer func() {
+		err := conn.dataConn.Close()
+
+		if err != nil {
+			fmt.Println(err)
+		}
+
+		conn.dataConn = nil
+	}()
+
+	conn.writeMessage(226, fmt.Sprintf("Closing data connection, sent %v bytes", bytes))
 
 	return nil
 }
