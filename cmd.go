@@ -690,7 +690,7 @@ func (cmd commandQuit) RequireAuth() bool {
 
 func (cmd commandQuit) Execute(conn *Conn, param string) {
 	conn.writeMessage(221, "Goodbye")
-	conn.Close()
+	conn.closed = true
 }
 
 // commandRetr responds to the RETR FTP command. It allows the client to
@@ -1043,8 +1043,6 @@ func (cmd commandStor) Execute(conn *Conn, param string) {
 	}()
 
 	bytes, err := conn.driver.PutFile(targetPath, conn.dataConn, conn.appendData)
-
-	defer conn.dataConn.Close()
 
 	if err == nil {
 		msg := "OK, received " + strconv.Itoa(int(bytes)) + " bytes"
