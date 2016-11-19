@@ -212,6 +212,7 @@ func (server *Server) ListenAndServe() error {
 			server.logger.Printf("listening error: %v", err)
 			break
 		}
+
 		driver, err := server.Factory.NewDriver()
 
 		if err != nil {
@@ -224,6 +225,7 @@ func (server *Server) ListenAndServe() error {
 
 		go ftpConn.Serve()
 	}
+
 	return nil
 }
 

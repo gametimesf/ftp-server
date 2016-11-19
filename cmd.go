@@ -442,6 +442,7 @@ func (cmd commandNlst) Execute(conn *Conn, param string) {
 		conn.writeMessage(550, err.Error())
 		return
 	}
+
 	conn.sendOutofbandData(listFormatter(files).Short())
 }
 
@@ -1042,6 +1043,8 @@ func (cmd commandStor) Execute(conn *Conn, param string) {
 	}()
 
 	bytes, err := conn.driver.PutFile(targetPath, conn.dataConn, conn.appendData)
+
+	defer conn.dataConn.Close()
 
 	if err == nil {
 		msg := "OK, received " + strconv.Itoa(int(bytes)) + " bytes"

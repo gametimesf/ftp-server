@@ -197,8 +197,10 @@ func (conn *Conn) buildPath(filename string) (fullPath string) {
 	} else {
 		fullPath = filepath.Clean(conn.namePrefix)
 	}
+
 	fullPath = strings.Replace(fullPath, "//", "/", -1)
 	fullPath = strings.Replace(fullPath, string(filepath.Separator), "/", -1)
+
 	return
 }
 
@@ -206,6 +208,7 @@ func (conn *Conn) buildPath(filename string) (fullPath string) {
 // data socket. Assumes the socket is open and ready to be used.
 func (conn *Conn) sendOutofbandData(data []byte) {
 	bytes := len(data)
+
 	if conn.dataConn != nil {
 		conn.dataConn.Write(data)
 		conn.dataConn.Close()
@@ -218,15 +221,17 @@ func (conn *Conn) sendOutofbandData(data []byte) {
 func (conn *Conn) sendOutofBandDataWriter(data io.ReadCloser) error {
 	conn.lastFilePos = 0
 	bytes, err := io.Copy(conn.dataConn, data)
-	if err != nil {
-		conn.dataConn.Close()
+
+	defer conn.dataConn.Close()
+	defer func() {
 		conn.dataConn = nil
+	}()
+
+	if err != nil {
 		return err
 	}
-	message := "Closing data connection, sent " + strconv.Itoa(int(bytes)) + " bytes"
-	conn.writeMessage(226, message)
-	conn.dataConn.Close()
-	conn.dataConn = nil
+
+	conn.writeMessage(226, "Closing data connection, sent "+strconv.Itoa(int(bytes))+" bytes")
 
 	return nil
 }
