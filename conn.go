@@ -81,11 +81,12 @@ func newSessionID() string {
 // goroutine, so use this channel to be notified when the connection can be
 // cleaned up.
 func (conn *Conn) Serve() {
-	conn.conn.SetDeadline(time.Now().Add(time.Minute))
-	conn.logger.Print("Connection Established")
+	fmt.Println("open", conn.conn.LocalAddr(), conn.conn.RemoteAddr())
 	conn.writeMessage(220, conn.server.WelcomeMessage)
 
 	for {
+		conn.conn.SetDeadline(time.Now().Add(15 * time.Second))
+		fmt.Println("setting deadline and read")
 		line, err := conn.controlReader.ReadString('\n')
 
 		if err != nil {

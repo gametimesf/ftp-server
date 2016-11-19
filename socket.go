@@ -45,7 +45,7 @@ func newActiveSocket(remote string, port int, logger *Logger) (DataSocket, error
 		return nil, err
 	}
 
-	tcpConn, err := net.DialTimeout("tcp", raddr.String(), time.Minute)
+	tcpConn, err := net.DialTimeout("tcp", raddr.String(), 15*time.Second)
 
 	if err != nil {
 		logger.Print(err)
@@ -176,7 +176,7 @@ func (socket *ftpPassiveSocket) GoListenAndServe() (err error) {
 	}
 
 	go func() {
-		listener.(*net.TCPListener).SetDeadline(time.Now().Add(time.Minute))
+		listener.(*net.TCPListener).SetDeadline(time.Now().Add(15 * time.Second))
 
 		conn, err := listener.Accept()
 
