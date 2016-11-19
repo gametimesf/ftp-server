@@ -176,6 +176,8 @@ func (socket *ftpPassiveSocket) GoListenAndServe() (err error) {
 	}
 
 	go func() {
+		listener.(*net.TCPListener).SetDeadline(time.Now().Add(time.Minute))
+
 		conn, err := listener.Accept()
 
 		defer socket.wg.Done()
