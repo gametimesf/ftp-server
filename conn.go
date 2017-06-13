@@ -25,7 +25,7 @@ type Conn struct {
 	dataConn      DataSocket
 	driver        Driver
 	auth          Auth
-	logger        *Logger
+	logger        Logger
 	server        *Server
 	tlsConfig     *tls.Config
 	sessionID     string
@@ -80,7 +80,8 @@ func newSessionID() string {
 // goroutine, so use this channel to be notified when the connection can be
 // cleaned up.
 func (conn *Conn) Serve() {
-	fmt.Println("open", conn.conn.LocalAddr(), conn.conn.RemoteAddr())
+	conn.logger.Print(conn.sessionID, "Connection Established")
+	// send welcome
 	conn.writeMessage(220, conn.server.WelcomeMessage)
 
 	for {
@@ -90,7 +91,7 @@ func (conn *Conn) Serve() {
 
 		if err != nil {
 			if err != io.EOF {
-				conn.logger.Print(fmt.Sprintln("read error:", err))
+				conn.logger.Print(conn.sessionID, fmt.Sprintln("read error:", err))
 			}
 
 			break
@@ -104,6 +105,7 @@ func (conn *Conn) Serve() {
 	}
 
 	conn.Close()
+	conn.logger.Print(conn.sessionID, "Connection Terminated")
 }
 
 // Close will manually close this connection, even if the client isn't ready.
@@ -123,7 +125,7 @@ func (conn *Conn) Close() {
 }
 
 func (conn *Conn) upgradeToTLS() error {
-	conn.logger.Print("Upgrading connectiion to TLS")
+	conn.logger.Print(conn.sessionID, "Upgrading connectiion to TLS")
 	tlsConn := tls.Server(conn.conn, conn.tlsConfig)
 	err := tlsConn.Handshake()
 	if err == nil {
@@ -139,9 +141,7 @@ func (conn *Conn) upgradeToTLS() error {
 // appropriate response.
 func (conn *Conn) receiveLine(line string) {
 	command, param := conn.parseLine(line)
-
-	conn.logger.PrintCommand(command, param)
-
+	conn.logger.PrintCommand(conn.sessionID, command, param)
 	cmdObj := commands[strings.ToUpper(command)]
 
 	if cmdObj == nil {
@@ -168,8 +168,17 @@ func (conn *Conn) parseLine(line string) (string, string) {
 
 // writeMessage will send a standard FTP response back to the client.
 func (conn *Conn) writeMessage(code int, message string) (wrote int, err error) {
-	conn.logger.PrintResponse(code, message)
+	conn.logger.PrintResponse(conn.sessionID, code, message)
 	line := fmt.Sprintf("%d %s\r\n", code, message)
+	wrote, err = conn.controlWriter.WriteString(line)
+	conn.controlWriter.Flush()
+	return
+}
+
+// writeMessage will send a standard FTP response back to the client.
+func (conn *Conn) writeMessageMultiline(code int, message string) (wrote int, err error) {
+	conn.logger.PrintResponse(conn.sessionID, code, message)
+	line := fmt.Sprintf("%d-%s\r\n%d END\r\n", code, message, code)
 	wrote, err = conn.controlWriter.WriteString(line)
 	conn.controlWriter.Flush()
 	return
