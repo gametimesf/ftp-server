@@ -1,18 +1,22 @@
-# server
+# ftp server
 
-A FTP server framework forked from [github.com/yob/graval](http://github.com/yob/graval) and changed a lot.
+An FTP server framework written in pure Go. This project is forked from [github.com/phacops/server](https://github.com/phacops/server), which is a fork from [github.com/yob/graval](https://github.com/yob/graval) that was modified to fit our needs. It was forked back into the Gametime organization so that we can continue to maintain it as needed.
+
+## Previous Documentation
+
+Aside from changing the install go get instructions and some markdown, the below README is from the original project when it was first forked.
 
 Full documentation for the package is available on [godoc](http://godoc.org/github.com/goftp/server)
 
-## Version
+### Version
 
     v0.2.1104
 
-## Installation
+### Installation
 
-    go get github.com/goftp/server
+    go get github.com/gametimesf/ftp-server
 
-## Usage
+### Usage
 
 To boot an FTP server you will need to provide a driver that speaks to your
 persistence layer - the required driver contract is listed below.
@@ -34,27 +38,27 @@ details:
     username: test
     password: 1234
 
-## Contributors
+### Contributors
 
 * Lunny Xiao <xiaolunwen@gmail.com>
 * James Healy <james@yob.id.au> [http://www.yob.id.au](http://www.yob.id.au)
 
-## Warning
+### Warning
 
 FTP is an incredibly insecure protocol. Be careful about forcing users to authenticate
 with a username or password that are important.
 
-## License
+### License
 
 This library is distributed under the terms of the MIT License. See the included file for
 more detail.
 
-## Contributing
+### Contributing
 
 All suggestions and patches welcome, preferably via a git repository I can pull from.
 If this library proves useful to you, please let me know.
 
-## Further Reading
+### Further Reading
 
 There are a range of RFCs that together specify the FTP protocol. In chronological
 order, the more useful ones are:
